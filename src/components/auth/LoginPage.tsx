@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { CookingPot } from 'lucide-react';
+import { X } from 'lucide-react';
+import { NeonBackground } from '../ui/NeonBackground';
+import { TypewriterText } from '../ui/TypewriterText';
 
 interface LoginPageProps {
   onSignIn: () => Promise<void>;
@@ -8,6 +10,7 @@ interface LoginPageProps {
 export function LoginPage({ onSignIn }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isLogoZoomed, setIsLogoZoomed] = useState(false);
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -30,24 +33,50 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6">
-      {/* Background glow */}
-      <div className="fixed inset-0 pointer-events-none">
+      {/* Background glow and Neon */}
+      <NeonBackground />
+      <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[320px] h-[320px] rounded-full bg-amber-500/8 blur-[100px]" />
         <div className="absolute bottom-1/3 left-1/3 w-[200px] h-[200px] rounded-full bg-orange-500/5 blur-[80px]" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-sm w-full animate-fade-in">
-        {/* Logo */}
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-2xl shadow-amber-500/30 mb-6 animate-float">
-          <CookingPot className="h-10 w-10 text-white" />
+        {/* Brand and Logo */}
+        <div className="flex flex-row items-center justify-center gap-4 mb-2">
+          <button 
+            onClick={() => setIsLogoZoomed(true)}
+            className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-2xl shadow-amber-500/30 animate-float relative overflow-hidden group hover:scale-105 transition-transform duration-300 ring-2 ring-amber-500/20 hover:ring-amber-500/50 flex-shrink-0 cursor-pointer"
+          >
+            <img src="/logo.png" alt="Donatella Logo" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+          </button>
+
+          <h1 className="text-4xl font-bold flex items-center m-0" dir="ltr">
+            <TypewriterText 
+              text="Donatella" 
+              delay={150} 
+              className="bg-gradient-to-l from-amber-400 via-orange-500 to-amber-600 bg-clip-text text-transparent"
+            />
+          </h1>
         </div>
 
-        {/* Brand */}
-        <h1 className="text-3xl font-bold bg-gradient-to-l from-amber-400 via-orange-500 to-amber-600 bg-clip-text text-transparent mb-2">
-          Donatella
-        </h1>
-        <p className="text-muted-foreground text-sm mb-1">
+        {/* Logo Popup Modal */}
+        {isLogoZoomed && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-300 animate-in fade-in zoom-in-95" onClick={() => setIsLogoZoomed(false)}>
+            <div className="relative group p-4" onClick={e => e.stopPropagation()}>
+              <button 
+                className="absolute -top-12 -left-4 sm:-right-12 sm:left-auto text-white/70 hover:text-amber-500 transition-colors p-2" 
+                onClick={() => setIsLogoZoomed(false)}
+              >
+                <X className="w-8 h-8" />
+              </button>
+              <img src="/logo.png" alt="Donatella Logo Zoomed" className="w-64 h-64 sm:w-96 sm:h-96 object-contain rounded-3xl shadow-2xl shadow-amber-500/50 ring-1 ring-amber-500/20 bg-background" />
+            </div>
+          </div>
+        )}
+
+        <p className="text-muted-foreground text-sm mb-1 mt-2">
           محرك تسعير الوصفات الاحترافي
         </p>
         <p className="text-muted-foreground/60 text-xs mb-10">

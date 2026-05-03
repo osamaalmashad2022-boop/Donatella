@@ -23,8 +23,8 @@ export function BottomNav() {
     <nav className="bottom-nav" id="main-nav">
       {/* Desktop brand (visible only on lg+) */}
       <div className="hidden lg:flex items-center gap-3 px-4 pb-6 mb-4 border-b border-border/30 w-full">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/25 flex-shrink-0">
-          <CookingPot className="h-5 w-5 text-white" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl shadow-lg shadow-amber-500/25 flex-shrink-0 overflow-hidden ring-1 ring-amber-500/20">
+          <img src="/logo.png" alt="Donatella Logo" className="w-full h-full object-cover" />
         </div>
         <div>
           <h1 className="text-base font-bold bg-gradient-to-l from-amber-400 to-orange-500 bg-clip-text text-transparent">

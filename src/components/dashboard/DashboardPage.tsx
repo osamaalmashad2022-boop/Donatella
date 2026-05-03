@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   DollarSign,
 } from 'lucide-react';
+import { TypewriterText } from '../ui/TypewriterText';
 
 export function DashboardPage() {
   const { ingredients, ingredientsMap } = useIngredients();
@@ -97,7 +98,9 @@ export function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       {/* Welcome */}
       <div>
-        <h1 className="text-xl font-bold">مرحباً بك 👋</h1>
+        <h1 className="text-xl font-bold" dir="rtl">
+          <TypewriterText text="مرحباً بك 👋" delay={100} className="text-foreground" />
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           نظرة عامة على مشروعك
         </p>
