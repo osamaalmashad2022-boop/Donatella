@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CookingPot, LogIn } from 'lucide-react';
+import { CookingPot } from 'lucide-react';
 
 interface LoginPageProps {
   onSignIn: () => Promise<void>;
