@@ -34,7 +34,7 @@ interface RecipeFormProps {
     overheadPercentage: number;
     profitMarginPercentage: number;
     notes: string;
-  }) => void;
+  }) => Promise<void>;
   recipe: Recipe | null;
   ingredients: Ingredient[];
   ingredientsMap: Map<string, Ingredient>;
@@ -111,12 +111,12 @@ export function RecipeForm({
 
   const isValid = name.trim() && validIngredients.length > 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
     setSubmitting(true);
     try {
-      onSubmit({
+      await onSubmit({
         name: name.trim(),
         nameEn: nameEn.trim() || undefined,
         category,
@@ -127,6 +127,8 @@ export function RecipeForm({
         profitMarginPercentage: parseFloat(profitMarginPercentage) || 0,
         notes: notes.trim(),
       });
+    } catch (err) {
+      console.error('Failed to save recipe:', err);
     } finally {
       setSubmitting(false);
     }

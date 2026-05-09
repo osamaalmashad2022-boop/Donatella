@@ -227,11 +227,11 @@ export function RecipePage() {
       <RecipeForm
         open={formOpen}
         onClose={handleClose}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           if (editingRecipe) {
-            updateRecipe(editingRecipe.id, data);
+            await updateRecipe(editingRecipe.id, data);
           } else {
-            addRecipe(data);
+            await addRecipe(data);
           }
           handleClose();
         }}

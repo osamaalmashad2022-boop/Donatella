@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { convertToBaseUnit, calcPricePerGram } from '@/lib/calculations';
 import type { Ingredient, WeightUnit, IngredientCategory } from '@/types';
@@ -25,42 +26,58 @@ export function useIngredients() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
+    // Listen for auth state changes so we re-subscribe when the user logs in
+    let unsubFirestore: (() => void) | null = null;
 
-    const colRef = collection(db, 'users', uid, 'ingredients');
-    const q = query(colRef, orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => {
-          const d = docSnap.data();
-          return {
-            id: docSnap.id,
-            name: d.name || '',
-            nameEn: d.nameEn || '',
-            category: (d.category || 'other') as IngredientCategory,
-            bulkPrice: d.bulkPrice || 0,
-            bulkWeight: d.bulkWeight || 0,
-            weightUnit: (d.weightUnit || 'KG') as WeightUnit,
-            totalGrams: d.totalGrams || 0,
-            pricePerGram: d.pricePerGram || 0,
-            createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-            updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-          } as Ingredient;
-        });
-        setIngredients(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching ingredients:', error);
-        setLoading(false);
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      // Clean up any previous Firestore listener
+      if (unsubFirestore) {
+        unsubFirestore();
+        unsubFirestore = null;
       }
-    );
-    return unsubscribe;
+
+      if (!user) {
+        setIngredients([]);
+        setLoading(false);
+        return;
+      }
+
+      const colRef = collection(db, 'users', user.uid, 'ingredients');
+      const q = query(colRef, orderBy('createdAt', 'desc'));
+      setLoading(true);
+      unsubFirestore = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return {
+              id: docSnap.id,
+              name: d.name || '',
+              nameEn: d.nameEn || '',
+              category: (d.category || 'other') as IngredientCategory,
+              bulkPrice: d.bulkPrice || 0,
+              bulkWeight: d.bulkWeight || 0,
+              weightUnit: (d.weightUnit || 'KG') as WeightUnit,
+              totalGrams: d.totalGrams || 0,
+              pricePerGram: d.pricePerGram || 0,
+              createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+              updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+            } as Ingredient;
+          });
+          setIngredients(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error('Error fetching ingredients:', error);
+          setLoading(false);
+        }
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubFirestore) unsubFirestore();
+    };
   }, []);
 
   const ingredientsMap = useMemo(
@@ -144,3 +161,4 @@ export function useIngredients() {
     deleteIngredient,
   };
 }
+

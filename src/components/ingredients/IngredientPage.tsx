@@ -135,11 +135,11 @@ export function IngredientPage() {
       <IngredientForm
         open={formOpen}
         onClose={handleClose}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           if (editingIngredient) {
-            updateIngredient(editingIngredient.id, data);
+            await updateIngredient(editingIngredient.id, data);
           } else {
-            addIngredient(data);
+            await addIngredient(data);
           }
           handleClose();
         }}

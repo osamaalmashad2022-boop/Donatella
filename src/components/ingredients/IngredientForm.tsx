@@ -30,7 +30,7 @@ interface IngredientFormProps {
     bulkPrice: number;
     bulkWeight: number;
     weightUnit: WeightUnit;
-  }) => void;
+  }) => Promise<void>;
   ingredient: Ingredient | null;
 }
 
@@ -72,12 +72,12 @@ export function IngredientForm({ open, onClose, onSubmit, ingredient }: Ingredie
 
   const isValid = name.trim() && parseFloat(bulkPrice) > 0 && parseFloat(bulkWeight) > 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
     setSubmitting(true);
     try {
-      onSubmit({
+      await onSubmit({
         name: name.trim(),
         nameEn: nameEn.trim() || undefined,
         category,
@@ -85,6 +85,8 @@ export function IngredientForm({ open, onClose, onSubmit, ingredient }: Ingredie
         bulkWeight: parseFloat(bulkWeight),
         weightUnit,
       });
+    } catch (err) {
+      console.error('Failed to save ingredient:', err);
     } finally {
       setSubmitting(false);
     }

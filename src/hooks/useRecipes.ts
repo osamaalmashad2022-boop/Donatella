@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '@/types';
 
@@ -24,45 +25,61 @@ export function useRecipes() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
+    // Listen for auth state changes so we re-subscribe when the user logs in
+    let unsubFirestore: (() => void) | null = null;
 
-    const colRef = collection(db, 'users', uid, 'recipes');
-    const q = query(colRef, orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => {
-          const d = docSnap.data();
-          return {
-            id: docSnap.id,
-            name: d.name || '',
-            nameEn: d.nameEn || '',
-            category: (d.category || 'regular') as RecipeCategory,
-            ingredients: (d.ingredients || []) as RecipeIngredient[],
-            subRecipeIds: d.subRecipeIds || [],
-            isSubRecipe: d.isSubRecipe || false,
-            servings: d.servings || 1,
-            packagingCost: d.packagingCost || 0,
-            overheadPercentage: d.overheadPercentage || 0,
-            profitMarginPercentage: d.profitMarginPercentage || 0,
-            notes: d.notes || '',
-            createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-            updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-          } as Recipe;
-        });
-        setRecipes(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching recipes:', error);
-        setLoading(false);
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      // Clean up any previous Firestore listener
+      if (unsubFirestore) {
+        unsubFirestore();
+        unsubFirestore = null;
       }
-    );
-    return unsubscribe;
+
+      if (!user) {
+        setRecipes([]);
+        setLoading(false);
+        return;
+      }
+
+      const colRef = collection(db, 'users', user.uid, 'recipes');
+      const q = query(colRef, orderBy('createdAt', 'desc'));
+      setLoading(true);
+      unsubFirestore = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return {
+              id: docSnap.id,
+              name: d.name || '',
+              nameEn: d.nameEn || '',
+              category: (d.category || 'regular') as RecipeCategory,
+              ingredients: (d.ingredients || []) as RecipeIngredient[],
+              subRecipeIds: d.subRecipeIds || [],
+              isSubRecipe: d.isSubRecipe || false,
+              servings: d.servings || 1,
+              packagingCost: d.packagingCost || 0,
+              overheadPercentage: d.overheadPercentage || 0,
+              profitMarginPercentage: d.profitMarginPercentage || 0,
+              notes: d.notes || '',
+              createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+              updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+            } as Recipe;
+          });
+          setRecipes(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error('Error fetching recipes:', error);
+          setLoading(false);
+        }
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubFirestore) unsubFirestore();
+    };
   }, []);
 
   const addRecipe = useCallback(
@@ -144,3 +161,4 @@ export function useRecipes() {
 
   return { recipes, loading, addRecipe, updateRecipe, deleteRecipe };
 }
+
