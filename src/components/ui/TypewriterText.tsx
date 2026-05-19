@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 
-export function TypewriterText({ text, delay = 100, className = "" }: { text: string; delay?: number, className?: string }) {
+interface TypewriterTextProps {
+  text: string;
+  delay?: number;
+  className?: string;
+}
+
+export const TypewriterText = memo(function TypewriterText({ text, delay = 100, className = "" }: TypewriterTextProps) {
   const [currentText, setCurrentText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -20,4 +26,4 @@ export function TypewriterText({ text, delay = 100, className = "" }: { text: st
       <span className={`inline-block w-[3px] h-[1.1em] bg-amber-500 mr-1.5 rounded-full ${currentIndex >= text.length ? 'animate-pulse' : ''}`} style={{ animationDuration: '0.8s' }} />
     </span>
   );
-}
+});

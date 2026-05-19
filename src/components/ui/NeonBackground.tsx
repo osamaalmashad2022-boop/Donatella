@@ -11,6 +11,7 @@ export function NeonBackground() {
 
     let particlesArray: Particle[] = [];
     const numberOfParticles = 80;
+    let animationId: number;
     
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -38,14 +39,16 @@ export function NeonBackground() {
       mouse.y = null;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('resize', () => {
+    const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       init();
-    });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('resize', handleResize);
 
     class Particle {
       x: number;
@@ -174,16 +177,18 @@ export function NeonBackground() {
         particlesArray[i].update();
       }
       connect();
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     }
 
     init();
     animate();
 
     return () => {
+      cancelAnimationFrame(animationId);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 

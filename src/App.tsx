@@ -1,4 +1,5 @@
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { LoginPage } from '@/components/auth/LoginPage';
 import { DashboardPage } from '@/components/dashboard/DashboardPage';
 import { IngredientPage } from '@/components/ingredients/IngredientPage';
@@ -56,7 +57,9 @@ function App() {
 
   return (
     <>
-      <AppLayout onLogout={logout}>{renderPage()}</AppLayout>
+      <AppLayout onLogout={logout}>
+        <ErrorBoundary>{renderPage()}</ErrorBoundary>
+      </AppLayout>
       <Toaster position="top-center" dir="rtl" />
     </>
   );

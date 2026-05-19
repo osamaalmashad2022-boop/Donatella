@@ -17,11 +17,12 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
     setError('');
     try {
       await onSignIn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Sign-in error:', err);
-      if (err?.code === 'auth/popup-closed-by-user') {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code === 'auth/popup-closed-by-user') {
         setError('تم إغلاق نافذة تسجيل الدخول');
-      } else if (err?.code === 'auth/unauthorized-domain') {
+      } else if (firebaseError.code === 'auth/unauthorized-domain') {
         setError('هذا النطاق غير مصرح به. أضفه في Firebase Console');
       } else {
         setError('فشل تسجيل الدخول. حاول مرة أخرى.');

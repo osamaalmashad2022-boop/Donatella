@@ -7,13 +7,13 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyAJt2lKZJPWRLBXjbzfjceiiK7iCO3dT8Q',
-  authDomain: 'donatella-2023.firebaseapp.com',
-  projectId: 'donatella-2023',
-  storageBucket: 'donatella-2023.firebasestorage.app',
-  messagingSenderId: '371448235676',
-  appId: '1:371448235676:web:d3bd91fdfb964bf6d88f59',
-  measurementId: 'G-DQ7B16LWJ1',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);

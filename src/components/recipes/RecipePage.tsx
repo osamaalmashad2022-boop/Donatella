@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useIngredients } from '@/hooks/useIngredients';
 import { RecipeForm } from './RecipeForm';
@@ -18,6 +18,7 @@ import {
   formatCurrency,
   scaleRecipeIngredients,
 } from '@/lib/calculations';
+import { toast } from 'sonner';
 import type { Recipe } from '@/types';
 
 const BATCH_OPTIONS = [
@@ -40,6 +41,23 @@ export function RecipePage() {
       (r.nameEn && r.nameEn.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // PERF-1: Memoize breakdown calculations
+  const recipesWithBreakdown = useMemo(
+    () =>
+      filtered.map((recipe) => ({
+        recipe,
+        breakdown: calculateFullBreakdown(
+          recipe.ingredients,
+          ingredientsMap,
+          recipe.packagingCost,
+          recipe.overheadPercentage,
+          recipe.profitMarginPercentage,
+          recipe.servings
+        ),
+      })),
+    [filtered, ingredientsMap]
+  );
+
   const handleEdit = (recipe: Recipe) => {
     setEditingRecipe(recipe);
     setFormOpen(true);
@@ -50,19 +68,39 @@ export function RecipePage() {
     setEditingRecipe(null);
   };
 
-  const handleDuplicate = (recipe: Recipe, multiplier: number = 1) => {
-    const scaled = scaleRecipeIngredients(recipe.ingredients, multiplier);
-    addRecipe({
-      name: multiplier > 1 ? `${recipe.name} (×${multiplier})` : `${recipe.name} — نسخة`,
-      nameEn: recipe.nameEn,
-      category: recipe.category,
-      ingredients: scaled,
-      servings: Math.round((recipe.servings || 1) * multiplier),
-      packagingCost: recipe.packagingCost * multiplier,
-      overheadPercentage: recipe.overheadPercentage,
-      profitMarginPercentage: recipe.profitMarginPercentage,
-      notes: recipe.notes,
-    });
+  // BUG-3: Added async/await + error handling + toast feedback
+  const handleDuplicate = async (recipe: Recipe, multiplier: number = 1) => {
+    try {
+      const scaled = scaleRecipeIngredients(recipe.ingredients, multiplier);
+      await addRecipe({
+        name: multiplier > 1 ? `${recipe.name} (×${multiplier})` : `${recipe.name} — نسخة`,
+        nameEn: recipe.nameEn,
+        category: recipe.category,
+        ingredients: scaled,
+        servings: Math.round((recipe.servings || 1) * multiplier),
+        packagingCost: recipe.packagingCost * multiplier,
+        overheadPercentage: recipe.overheadPercentage,
+        profitMarginPercentage: recipe.profitMarginPercentage,
+        notes: recipe.notes,
+      });
+      toast.success('تم نسخ الوصفة بنجاح');
+    } catch (err) {
+      console.error('Failed to duplicate recipe:', err);
+      toast.error('فشل نسخ الوصفة');
+    }
+  };
+
+  // SEC-3: Confirm before delete
+  const handleDelete = async (recipe: Recipe) => {
+    if (window.confirm(`هل تريد حذف "${recipe.name}" نهائياً؟`)) {
+      try {
+        await deleteRecipe(recipe.id);
+        toast.success('تم حذف الوصفة');
+      } catch (err) {
+        console.error('Failed to delete recipe:', err);
+        toast.error('فشل حذف الوصفة');
+      }
+    }
   };
 
   return (
@@ -101,115 +139,104 @@ export function RecipePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 stagger-children">
-          {filtered.map((recipe) => {
-            const breakdown = calculateFullBreakdown(
-              recipe.ingredients,
-              ingredientsMap,
-              recipe.packagingCost,
-              recipe.overheadPercentage,
-              recipe.profitMarginPercentage,
-              recipe.servings
-            );
-
-            return (
-              <div key={recipe.id} className="item-card space-y-3">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm truncate">{recipe.name}</h3>
-                    {recipe.nameEn && (
-                      <p className="text-[11px] text-muted-foreground truncate" dir="ltr">
-                        {recipe.nameEn}
-                      </p>
-                    )}
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      recipe.category === 'healthy'
-                        ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]'
-                        : 'bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]'
-                    }
-                  >
-                    {recipe.category === 'healthy' ? '🥗 صحي' : '🍰 عادي'}
-                  </Badge>
-                </div>
-
-                {/* Quick stats */}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-muted/30 py-2 px-1">
-                    <p className="text-[10px] text-muted-foreground">المكونات</p>
-                    <p className="font-mono font-bold text-sm">{recipe.ingredients.length}</p>
-                  </div>
-                  <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 py-2 px-1">
-                    <p className="text-[10px] text-muted-foreground">التكلفة</p>
-                    <p className="font-mono font-bold text-sm text-amber-500">
-                      {formatCurrency(breakdown.totalCost)}
+          {recipesWithBreakdown.map(({ recipe, breakdown }) => (
+            <div key={recipe.id} className="item-card space-y-3">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm truncate">{recipe.name}</h3>
+                  {recipe.nameEn && (
+                    <p className="text-[11px] text-muted-foreground truncate" dir="ltr">
+                      {recipe.nameEn}
                     </p>
-                  </div>
-                  <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/10 py-2 px-1">
-                    <p className="text-[10px] text-muted-foreground">سعر البيع</p>
-                    <p className="font-mono font-bold text-sm text-emerald-400">
-                      {formatCurrency(breakdown.suggestedSellingPrice)}
-                    </p>
-                  </div>
+                  )}
                 </div>
+                <Badge
+                  variant="secondary"
+                  className={
+                    recipe.category === 'healthy'
+                      ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]'
+                      : 'bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]'
+                  }
+                >
+                  {recipe.category === 'healthy' ? '🥗 صحي' : '🍰 عادي'}
+                </Badge>
+              </div>
 
-                {/* Profit row */}
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5">
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                    <span className="text-xs text-muted-foreground">الربح</span>
-                  </div>
-                  <span className="font-mono font-bold text-emerald-400 tabular-nums">
-                    {formatCurrency(breakdown.netProfit)}
-                  </span>
+              {/* Quick stats */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-muted/30 py-2 px-1">
+                  <p className="text-[10px] text-muted-foreground">المكونات</p>
+                  <p className="font-mono font-bold text-sm">{recipe.ingredients.length}</p>
                 </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/20">
-                  {/* Batch scaling */}
-                  <div className="flex items-center gap-1">
-                    {BATCH_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleDuplicate(recipe, opt.value)}
-                        className="px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-[10px] font-mono font-bold text-muted-foreground hover:text-foreground transition-colors"
-                        title={`ضاعف الوصفة ${opt.label}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Edit/Delete/Duplicate */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      className="p-2 rounded-lg hover:bg-accent transition-colors"
-                      onClick={() => handleDuplicate(recipe)}
-                      aria-label="نسخ"
-                    >
-                      <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                    <button
-                      className="p-2 rounded-lg hover:bg-accent transition-colors"
-                      onClick={() => handleEdit(recipe)}
-                      aria-label="تعديل"
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                    <button
-                      className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
-                      onClick={() => deleteRecipe(recipe.id)}
-                      aria-label="حذف"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
+                <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 py-2 px-1">
+                  <p className="text-[10px] text-muted-foreground">التكلفة</p>
+                  <p className="font-mono font-bold text-sm text-amber-500">
+                    {formatCurrency(breakdown.totalCost)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/10 py-2 px-1">
+                  <p className="text-[10px] text-muted-foreground">سعر البيع</p>
+                  <p className="font-mono font-bold text-sm text-emerald-400">
+                    {formatCurrency(breakdown.suggestedSellingPrice)}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Profit row */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-xs text-muted-foreground">الربح</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-400 tabular-nums">
+                  {formatCurrency(breakdown.netProfit)}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-2 border-t border-border/20">
+                {/* Batch scaling */}
+                <div className="flex items-center gap-1">
+                  {BATCH_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleDuplicate(recipe, opt.value)}
+                      className="px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-[10px] font-mono font-bold text-muted-foreground hover:text-foreground transition-colors"
+                      title={`ضاعف الوصفة ${opt.label}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Edit/Delete/Duplicate */}
+                <div className="flex items-center gap-1">
+                  <button
+                    className="p-2 rounded-lg hover:bg-accent transition-colors"
+                    onClick={() => handleDuplicate(recipe)}
+                    aria-label="نسخ"
+                  >
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg hover:bg-accent transition-colors"
+                    onClick={() => handleEdit(recipe)}
+                    aria-label="تعديل"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                    onClick={() => handleDelete(recipe)}
+                    aria-label="حذف"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

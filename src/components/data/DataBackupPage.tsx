@@ -17,6 +17,29 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
+// SEC-2: Validation constants and helpers
+const MAX_IMPORT_INGREDIENTS = 500;
+const MAX_IMPORT_RECIPES = 200;
+
+function validateIngredient(ing: unknown): boolean {
+  if (!ing || typeof ing !== 'object') return false;
+  const item = ing as Record<string, unknown>;
+  return (
+    typeof item.name === 'string' && item.name.length > 0 && item.name.length < 200 &&
+    typeof item.bulkPrice === 'number' && item.bulkPrice >= 0 && item.bulkPrice < 1_000_000 &&
+    typeof item.bulkWeight === 'number' && item.bulkWeight > 0 && item.bulkWeight < 1_000_000
+  );
+}
+
+function validateRecipe(rec: unknown): boolean {
+  if (!rec || typeof rec !== 'object') return false;
+  const item = rec as Record<string, unknown>;
+  return (
+    typeof item.name === 'string' && item.name.length > 0 && item.name.length < 200 &&
+    Array.isArray(item.ingredients)
+  );
+}
+
 export function DataBackupPage() {
   const { ingredients, ingredientsMap } = useIngredients();
   const { recipes } = useRecipes();
@@ -32,22 +55,28 @@ export function DataBackupPage() {
       const data = JSON.parse(text);
       let ingCount = 0;
       let recCount = 0;
+      let skippedCount = 0;
 
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error('Not authenticated');
 
-      // Import ingredients to Firestore
+      // SEC-2: Import ingredients with validation
       if (data.ingredients && Array.isArray(data.ingredients)) {
-        for (const ing of data.ingredients) {
+        const validIngredients = data.ingredients.slice(0, MAX_IMPORT_INGREDIENTS);
+        for (const ing of validIngredients) {
+          if (!validateIngredient(ing)) {
+            skippedCount++;
+            continue;
+          }
           await addDoc(collection(db, 'users', uid, 'ingredients'), {
-            name: ing.name || '',
-            nameEn: ing.nameEn || '',
+            name: String(ing.name).trim(),
+            nameEn: String(ing.nameEn || '').trim(),
             category: ing.category || 'other',
-            bulkPrice: ing.bulkPrice || 0,
-            bulkWeight: ing.bulkWeight || 0,
+            bulkPrice: Number(ing.bulkPrice) || 0,
+            bulkWeight: Number(ing.bulkWeight) || 0,
             weightUnit: ing.weightUnit || 'KG',
-            totalGrams: ing.totalGrams || 0,
-            pricePerGram: ing.pricePerGram || 0,
+            totalGrams: Number(ing.totalGrams) || 0,
+            pricePerGram: Number(ing.pricePerGram) || 0,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
@@ -55,21 +84,26 @@ export function DataBackupPage() {
         }
       }
 
-      // Import recipes to Firestore
+      // SEC-2: Import recipes with validation
       if (data.recipes && Array.isArray(data.recipes)) {
-        for (const rec of data.recipes) {
+        const validRecipes = data.recipes.slice(0, MAX_IMPORT_RECIPES);
+        for (const rec of validRecipes) {
+          if (!validateRecipe(rec)) {
+            skippedCount++;
+            continue;
+          }
           await addDoc(collection(db, 'users', uid, 'recipes'), {
-            name: rec.name || '',
-            nameEn: rec.nameEn || '',
+            name: String(rec.name).trim(),
+            nameEn: String(rec.nameEn || '').trim(),
             category: rec.category || 'regular',
-            ingredients: rec.ingredients || [],
+            ingredients: Array.isArray(rec.ingredients) ? rec.ingredients : [],
             subRecipeIds: rec.subRecipeIds || [],
             isSubRecipe: rec.isSubRecipe || false,
-            servings: rec.servings || 1,
-            packagingCost: rec.packagingCost || 0,
-            overheadPercentage: rec.overheadPercentage || 0,
-            profitMarginPercentage: rec.profitMarginPercentage || 0,
-            notes: rec.notes || '',
+            servings: Number(rec.servings) || 1,
+            packagingCost: Number(rec.packagingCost) || 0,
+            overheadPercentage: Number(rec.overheadPercentage) || 0,
+            profitMarginPercentage: Number(rec.profitMarginPercentage) || 0,
+            notes: String(rec.notes || '').trim(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
@@ -77,7 +111,11 @@ export function DataBackupPage() {
         }
       }
 
-      toast.success(`تم الاستيراد بنجاح: ${ingCount} مكون و ${recCount} وصفة`);
+      let message = `تم الاستيراد بنجاح: ${ingCount} مكون و ${recCount} وصفة`;
+      if (skippedCount > 0) {
+        message += ` (تم تخطي ${skippedCount} عنصر غير صالح)`;
+      }
+      toast.success(message);
     } catch (err) {
       console.error('Import error:', err);
       toast.error('فشل الاستيراد. تأكد من صحة الملف.');
@@ -87,6 +125,7 @@ export function DataBackupPage() {
     }
   };
 
+  // CC-1: Use shared exportToJSON instead of duplicating download logic
   const handleFullBackup = () => {
     const backupData = {
       ingredients,
@@ -94,16 +133,7 @@ export function DataBackupPage() {
       exportDate: new Date().toISOString(),
       version: '2.0',
     };
-    const jsonStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `donatella-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportToJSON(backupData, `donatella-backup-${new Date().toISOString().split('T')[0]}`);
     toast.success('تم تحميل النسخة الاحتياطية');
   };
 
@@ -182,7 +212,7 @@ export function DataBackupPage() {
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-amber-400">
-            تنبيه: سيتم إضافة البيانات المستوردة إلى البيانات الحالية
+            تنبيه: سيتم إضافة البيانات المستوردة إلى البيانات الحالية (حد أقصى {MAX_IMPORT_INGREDIENTS} مكون و {MAX_IMPORT_RECIPES} وصفة)
           </p>
         </div>
 

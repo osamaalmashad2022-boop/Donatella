@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -51,7 +52,9 @@ export function RecipeForm({
   const [name, setName] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('regular');
-  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [recipeIngredients, setRecipeIngredients] = useState<(RecipeIngredient & { _uid: string })[]>([]);
+  let uidCounter = 0;
+  const genUid = () => `ri-${Date.now()}-${uidCounter++}`;
   const [servings, setServings] = useState('1');
   const [packagingCost, setPackagingCost] = useState('0');
   const [overheadPercentage, setOverheadPercentage] = useState('10');
@@ -64,7 +67,7 @@ export function RecipeForm({
       setName(recipe.name);
       setNameEn(recipe.nameEn || '');
       setCategory(recipe.category);
-      setRecipeIngredients([...recipe.ingredients]);
+      setRecipeIngredients(recipe.ingredients.map((ri, i) => ({ ...ri, _uid: `existing-${i}` })));
       setServings((recipe.servings || 1).toString());
       setPackagingCost(recipe.packagingCost.toString());
       setOverheadPercentage(recipe.overheadPercentage.toString());
@@ -86,7 +89,7 @@ export function RecipeForm({
   const addIngredientRow = () => {
     setRecipeIngredients([
       ...recipeIngredients,
-      { ingredientId: '', gramsUsed: 0, wastePercentage: 0 },
+      { ingredientId: '', gramsUsed: 0, wastePercentage: 0, _uid: genUid() },
     ]);
   };
 
@@ -105,9 +108,9 @@ export function RecipeForm({
     setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
   };
 
-  const validIngredients = recipeIngredients.filter(
-    (ri) => ri.ingredientId && ri.gramsUsed > 0
-  );
+  const validIngredients = recipeIngredients
+    .filter((ri) => ri.ingredientId && ri.gramsUsed > 0)
+    .map(({ _uid, ...rest }) => rest);
 
   const isValid = name.trim() && validIngredients.length > 0;
 
@@ -141,6 +144,9 @@ export function RecipeForm({
           <DialogTitle>
             {recipe ? 'تعديل الوصفة' : 'وصفة جديدة'}
           </DialogTitle>
+          <DialogDescription>
+            {recipe ? 'قم بتعديل بيانات الوصفة' : 'أدخل بيانات الوصفة الجديدة'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -225,7 +231,7 @@ export function RecipeForm({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {recipeIngredients.map((ri, index) => (
                   <IngredientRow
-                    key={index}
+                    key={ri._uid}
                     index={index}
                     ingredientId={ri.ingredientId}
                     gramsUsed={ri.gramsUsed}
