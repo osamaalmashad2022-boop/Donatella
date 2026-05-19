@@ -7,7 +7,7 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/lib/firebase';
 
 /**
@@ -18,6 +18,21 @@ import { auth, googleProvider, db } from '@/lib/firebase';
 async function syncUserProfile(user: User) {
   try {
     const userRef = doc(db, 'users', user.uid);
+    
+    // Sync theme if available
+    const userDoc = await getDoc(userRef);
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      if (data.theme) {
+        localStorage.setItem('theme-preference', data.theme);
+        if (data.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    }
+
     await setDoc(
       userRef,
       {

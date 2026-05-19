@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { auth } from '@/lib/firebase';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, X, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard:   'الرئيسية',
@@ -20,6 +21,7 @@ export function TopBar({ onLogout }: TopBarProps) {
   const title = PAGE_TITLES[activePage] || 'الرئيسية';
   const user = auth.currentUser;
   const [isLogoZoomed, setIsLogoZoomed] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <>
@@ -48,6 +50,19 @@ export function TopBar({ onLogout }: TopBarProps) {
               referrerPolicy="no-referrer"
             />
           )}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+            aria-label="تبديل المظهر"
+            title="تبديل المظهر"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4 text-amber-500" />
+            ) : (
+              <Moon className="h-4 w-4 text-slate-700" />
+            )}
+          </button>
+          
           {onLogout && (
             <button
               onClick={onLogout}
