@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -99,6 +100,9 @@ export function IngredientForm({ open, onClose, onSubmit, ingredient }: Ingredie
           <DialogTitle>
             {ingredient ? 'تعديل المكون' : 'إضافة مكون جديد'}
           </DialogTitle>
+          <DialogDescription>
+            {ingredient ? 'قم بتعديل بيانات المكون' : 'أدخل بيانات المكون الجديد'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

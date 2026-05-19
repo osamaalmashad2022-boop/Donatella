@@ -67,7 +67,11 @@ export function IngredientCard({ ingredient, onEdit, onDelete }: IngredientCardP
           </button>
           <button
             className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
-            onClick={() => onDelete(ingredient.id)}
+            onClick={() => {
+              if (window.confirm(`هل تريد حذف "${ingredient.name}" نهائياً؟`)) {
+                onDelete(ingredient.id);
+              }
+            }}
             aria-label="حذف"
           >
             <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />

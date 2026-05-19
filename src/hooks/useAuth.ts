@@ -58,13 +58,14 @@ export function useAuth() {
   const signInWithGoogle = useCallback(async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string; message?: string };
       // Fallback to redirect if popup is blocked by COOP or popup blockers
       if (
-        err?.code === 'auth/popup-blocked' ||
-        err?.code === 'auth/popup-closed-by-user' ||
-        err?.code === 'auth/cancelled-popup-request' ||
-        err?.message?.includes('Cross-Origin-Opener-Policy')
+        firebaseError.code === 'auth/popup-blocked' ||
+        firebaseError.code === 'auth/popup-closed-by-user' ||
+        firebaseError.code === 'auth/cancelled-popup-request' ||
+        firebaseError.message?.includes('Cross-Origin-Opener-Policy')
       ) {
         await signInWithRedirect(auth, googleProvider);
       } else {
