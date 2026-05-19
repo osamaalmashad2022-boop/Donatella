@@ -57,8 +57,8 @@ export function RecipeForm({
   const genUid = () => `ri-${Date.now()}-${uidCounterRef.current++}`;
   const [servings, setServings] = useState('1');
   const [packagingCost, setPackagingCost] = useState('0');
-  const [overheadPercentage, setOverheadPercentage] = useState('10');
-  const [profitMarginPercentage, setProfitMarginPercentage] = useState('30');
+  const [overheadPercentage, setOverheadPercentage] = useState('0');
+  const [profitMarginPercentage, setProfitMarginPercentage] = useState('0');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -80,8 +80,8 @@ export function RecipeForm({
       setRecipeIngredients([]);
       setServings('1');
       setPackagingCost('0');
-      setOverheadPercentage('10');
-      setProfitMarginPercentage('30');
+      setOverheadPercentage('0');
+      setProfitMarginPercentage('0');
       setNotes('');
     }
   }, [recipe, open]);
@@ -273,7 +273,7 @@ export function RecipeForm({
                 type="number"
                 step="0.1"
                 min="0"
-                placeholder="10"
+                placeholder="0"
                 value={overheadPercentage}
                 onChange={(e) => setOverheadPercentage(e.target.value)}
                 dir="ltr"
@@ -287,7 +287,7 @@ export function RecipeForm({
                 type="number"
                 step="0.1"
                 min="0"
-                placeholder="30"
+                placeholder="0"
                 value={profitMarginPercentage}
                 onChange={(e) => setProfitMarginPercentage(e.target.value)}
                 dir="ltr"

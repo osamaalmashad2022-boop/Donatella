@@ -21,11 +21,7 @@ import {
 import { toast } from 'sonner';
 import type { Recipe } from '@/types';
 
-const BATCH_OPTIONS = [
-  { label: '×2', value: 2 },
-  { label: '×5', value: 5 },
-  { label: '×10', value: 10 },
-];
+
 
 export function RecipePage() {
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
@@ -204,19 +200,7 @@ export function RecipePage() {
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-border/20">
-                {/* Batch scaling */}
-                <div className="flex items-center gap-1">
-                  {BATCH_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => handleDuplicate(recipe, opt.value)}
-                      className="px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-[10px] font-mono font-bold text-muted-foreground hover:text-foreground transition-colors"
-                      title={`ضاعف الوصفة ${opt.label}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+
 
                 {/* Edit/Delete/Duplicate */}
                 <div className="flex items-center gap-1">
