@@ -4,6 +4,8 @@ import { auth } from '@/lib/firebase';
 import { LogOut, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+
 const PAGE_TITLES: Record<string, string> = {
   dashboard:   'الرئيسية',
   ingredients: 'إدارة المكونات',
@@ -42,6 +44,8 @@ export function TopBar({ onLogout }: TopBarProps) {
       {/* User avatar + logout */}
       {user && (
         <div className="flex items-center gap-2 flex-shrink-0">
+          <InstallPrompt />
+          
           {user.photoURL && (
             <img
               src={user.photoURL}
