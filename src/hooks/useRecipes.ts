@@ -62,6 +62,7 @@ export function useRecipes() {
               overheadPercentage: d.overheadPercentage || 0,
               profitMarginPercentage: d.profitMarginPercentage || 0,
               notes: d.notes || '',
+              noteImages: d.noteImages || [],
               createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
               updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
             } as Recipe;
@@ -95,6 +96,7 @@ export function useRecipes() {
       overheadPercentage: number;
       profitMarginPercentage: number;
       notes?: string;
+      noteImages?: string[];
     }) => {
       await addDoc(getUserCollection(), {
         name: data.name,
@@ -108,6 +110,7 @@ export function useRecipes() {
         overheadPercentage: data.overheadPercentage,
         profitMarginPercentage: data.profitMarginPercentage,
         notes: data.notes || '',
+        noteImages: data.noteImages || [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -130,6 +133,7 @@ export function useRecipes() {
         overheadPercentage: number;
         profitMarginPercentage: number;
         notes?: string;
+        noteImages?: string[];
       }
     ) => {
       const uid = auth.currentUser?.uid;
@@ -147,6 +151,7 @@ export function useRecipes() {
         overheadPercentage: data.overheadPercentage,
         profitMarginPercentage: data.profitMarginPercentage,
         notes: data.notes || '',
+        noteImages: data.noteImages || [],
         updatedAt: serverTimestamp(),
       });
     },

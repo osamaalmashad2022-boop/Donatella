@@ -5,6 +5,12 @@ import { RecipeForm } from './RecipeForm';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Search,
   Plus,
   CookingPot,
@@ -29,6 +35,7 @@ export function RecipePage() {
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const mainRecipes = useMemo(
     () => recipes.filter((r) => !r.isSubRecipe),
@@ -86,6 +93,7 @@ export function RecipePage() {
         overheadPercentage: recipe.overheadPercentage,
         profitMarginPercentage: recipe.profitMarginPercentage,
         notes: recipe.notes,
+        noteImages: recipe.noteImages,
       });
       toast.success('تم نسخ الوصفة بنجاح');
     } catch (err) {
@@ -198,10 +206,33 @@ export function RecipePage() {
                 </span>
               </div>
 
+              {/* Notes Section */}
+              {(recipe.notes || (recipe.noteImages && recipe.noteImages.length > 0)) && (
+                <div className="px-2 py-2 mt-2 bg-muted/20 rounded-lg border border-border/50">
+                  {recipe.notes && (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words mb-2">
+                      {recipe.notes}
+                    </p>
+                  )}
+                  {recipe.noteImages && recipe.noteImages.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {recipe.noteImages.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt={`ملاحظة ${idx + 1}`}
+                          className="w-12 h-12 object-cover rounded-md border border-border flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedImage(img)}
+                          title="اضغط لتكبير الصورة"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-border/20">
-
-
                 {/* Edit/Delete/Duplicate */}
                 <div className="flex items-center gap-1">
                   <button
@@ -258,6 +289,24 @@ export function RecipePage() {
         ingredients={ingredients}
         ingredientsMap={ingredientsMap}
       />
+
+      {/* Image Viewer */}
+      <Dialog open={!!selectedImage} onOpenChange={(v) => !v && setSelectedImage(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-1 border-0 bg-black/90">
+          <DialogHeader className="sr-only">
+            <DialogTitle>تكبير الصورة</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="relative w-full h-full flex items-center justify-center p-2">
+              <img
+                src={selectedImage}
+                alt="مرفق مكبر"
+                className="max-w-full max-h-[85vh] object-contain rounded-md"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
