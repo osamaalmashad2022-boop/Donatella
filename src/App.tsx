@@ -57,9 +57,11 @@ function App() {
 
   return (
     <>
-      <AppLayout onLogout={logout}>
-        <ErrorBoundary>{renderPage()}</ErrorBoundary>
-      </AppLayout>
+      <ErrorBoundary onReset={() => useAppStore.getState().setActivePage('dashboard')}>
+        <AppLayout onLogout={logout}>
+          {renderPage()}
+        </AppLayout>
+      </ErrorBoundary>
       <Toaster position="top-center" dir="rtl" />
     </>
   );

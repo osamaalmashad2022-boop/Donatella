@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useIngredients } from '@/hooks/useIngredients';
 import { useRecipes } from '@/hooks/useRecipes';
 import { exportIngredientsToCSV, exportRecipesToCSV, exportToJSON } from '@/lib/export';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -20,12 +20,14 @@ import {
 // SEC-2: Validation constants and helpers
 const MAX_IMPORT_INGREDIENTS = 500;
 const MAX_IMPORT_RECIPES = 200;
+const BATCH_LIMIT = 500; // Firestore WriteBatch limit
 
 function validateIngredient(ing: unknown): boolean {
   if (!ing || typeof ing !== 'object') return false;
   const item = ing as Record<string, unknown>;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
   return (
-    typeof item.name === 'string' && item.name.length > 0 && item.name.length < 200 &&
+    name.length > 0 && name.length < 200 &&
     typeof item.bulkPrice === 'number' && item.bulkPrice >= 0 && item.bulkPrice < 1_000_000 &&
     typeof item.bulkWeight === 'number' && item.bulkWeight > 0 && item.bulkWeight < 1_000_000
   );
@@ -34,8 +36,9 @@ function validateIngredient(ing: unknown): boolean {
 function validateRecipe(rec: unknown): boolean {
   if (!rec || typeof rec !== 'object') return false;
   const item = rec as Record<string, unknown>;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
   return (
-    typeof item.name === 'string' && item.name.length > 0 && item.name.length < 200 &&
+    name.length > 0 && name.length < 200 &&
     Array.isArray(item.ingredients)
   );
 }
@@ -60,15 +63,19 @@ export function DataBackupPage() {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error('Not authenticated');
 
-      // SEC-2: Import ingredients with validation
+      // Import ingredients with validation + WriteBatch
       if (data.ingredients && Array.isArray(data.ingredients)) {
-        const validIngredients = data.ingredients.slice(0, MAX_IMPORT_INGREDIENTS);
-        for (const ing of validIngredients) {
+        const sliced = data.ingredients.slice(0, MAX_IMPORT_INGREDIENTS);
+        skippedCount += data.ingredients.length - sliced.length;
+
+        // Collect validated items
+        const validItems: Record<string, unknown>[] = [];
+        for (const ing of sliced) {
           if (!validateIngredient(ing)) {
             skippedCount++;
             continue;
           }
-          await addDoc(collection(db, 'users', uid, 'ingredients'), {
+          validItems.push({
             name: String(ing.name).trim(),
             nameEn: String(ing.nameEn || '').trim(),
             category: ing.category || 'other',
@@ -80,19 +87,33 @@ export function DataBackupPage() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-          ingCount++;
+        }
+
+        // Write in batches of BATCH_LIMIT
+        for (let i = 0; i < validItems.length; i += BATCH_LIMIT) {
+          const chunk = validItems.slice(i, i + BATCH_LIMIT);
+          const batch = writeBatch(db);
+          for (const item of chunk) {
+            const ref = doc(collection(db, 'users', uid, 'ingredients'));
+            batch.set(ref, item);
+          }
+          await batch.commit();
+          ingCount += chunk.length;
         }
       }
 
-      // SEC-2: Import recipes with validation
+      // Import recipes with validation + WriteBatch
       if (data.recipes && Array.isArray(data.recipes)) {
-        const validRecipes = data.recipes.slice(0, MAX_IMPORT_RECIPES);
-        for (const rec of validRecipes) {
+        const sliced = data.recipes.slice(0, MAX_IMPORT_RECIPES);
+        skippedCount += data.recipes.length - sliced.length;
+
+        const validItems: Record<string, unknown>[] = [];
+        for (const rec of sliced) {
           if (!validateRecipe(rec)) {
             skippedCount++;
             continue;
           }
-          await addDoc(collection(db, 'users', uid, 'recipes'), {
+          validItems.push({
             name: String(rec.name).trim(),
             nameEn: String(rec.nameEn || '').trim(),
             category: rec.category || 'regular',
@@ -107,13 +128,23 @@ export function DataBackupPage() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-          recCount++;
+        }
+
+        for (let i = 0; i < validItems.length; i += BATCH_LIMIT) {
+          const chunk = validItems.slice(i, i + BATCH_LIMIT);
+          const batch = writeBatch(db);
+          for (const item of chunk) {
+            const ref = doc(collection(db, 'users', uid, 'recipes'));
+            batch.set(ref, item);
+          }
+          await batch.commit();
+          recCount += chunk.length;
         }
       }
 
       let message = `تم الاستيراد بنجاح: ${ingCount} مكون و ${recCount} وصفة`;
       if (skippedCount > 0) {
-        message += ` (تم تخطي ${skippedCount} عنصر غير صالح)`;
+        message += ` (تم تخطي ${skippedCount} عنصر غير صالح أو زائد عن الحد)`;
       }
       toast.success(message);
     } catch (err) {

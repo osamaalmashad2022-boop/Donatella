@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,8 @@ export function RecipeForm({
   const [nameEn, setNameEn] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('regular');
   const [recipeIngredients, setRecipeIngredients] = useState<(RecipeIngredient & { _uid: string })[]>([]);
-  let uidCounter = 0;
-  const genUid = () => `ri-${Date.now()}-${uidCounter++}`;
+  const uidCounterRef = useRef(0);
+  const genUid = () => `ri-${Date.now()}-${uidCounterRef.current++}`;
   const [servings, setServings] = useState('1');
   const [packagingCost, setPackagingCost] = useState('0');
   const [overheadPercentage, setOverheadPercentage] = useState('10');
@@ -87,8 +87,8 @@ export function RecipeForm({
   }, [recipe, open]);
 
   const addIngredientRow = () => {
-    setRecipeIngredients([
-      ...recipeIngredients,
+    setRecipeIngredients((prev) => [
+      ...prev,
       { ingredientId: '', gramsUsed: 0, wastePercentage: 0, _uid: genUid() },
     ]);
   };
@@ -99,13 +99,15 @@ export function RecipeForm({
     gramsUsed: number,
     wastePercentage: number
   ) => {
-    const updated = [...recipeIngredients];
-    updated[index] = { ingredientId, gramsUsed, wastePercentage };
-    setRecipeIngredients(updated);
+    setRecipeIngredients((prev) => {
+      const updated = [...prev];
+      updated[index] = { ingredientId, gramsUsed, wastePercentage, _uid: prev[index]._uid };
+      return updated;
+    });
   };
 
   const removeIngredientRow = (index: number) => {
-    setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
+    setRecipeIngredients((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validIngredients = recipeIngredients

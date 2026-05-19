@@ -34,11 +34,19 @@ export function RecipePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
-  const mainRecipes = recipes.filter((r) => !r.isSubRecipe);
-  const filtered = mainRecipes.filter(
-    (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      (r.nameEn && r.nameEn.toLowerCase().includes(search.toLowerCase()))
+  const mainRecipes = useMemo(
+    () => recipes.filter((r) => !r.isSubRecipe),
+    [recipes]
+  );
+
+  const filtered = useMemo(
+    () =>
+      mainRecipes.filter(
+        (r) =>
+          r.name.toLowerCase().includes(search.toLowerCase()) ||
+          (r.nameEn && r.nameEn.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [mainRecipes, search]
   );
 
   // PERF-1: Memoize breakdown calculations
