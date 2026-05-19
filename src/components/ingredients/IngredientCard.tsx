@@ -54,7 +54,7 @@ export function IngredientCard({ ingredient, onEdit, onDelete }: IngredientCardP
         <div className="cost-result px-3 py-1.5 rounded-lg">
           <span className="text-[10px] text-muted-foreground">سعر الجرام: </span>
           <span className="font-mono font-bold text-sm text-amber-500">
-            {ingredient.pricePerGram.toFixed(4)} ج.م
+            {parseFloat(ingredient.pricePerGram.toFixed(4))} ج.م
           </span>
         </div>
         <div className="flex items-center gap-1">
