@@ -60,6 +60,7 @@ export interface Recipe {
   overheadPercentage: number;
   profitMarginPercentage: number;
   notes: string;
+  noteImages?: string[];
   createdAt: string;
   updatedAt: string;
 }

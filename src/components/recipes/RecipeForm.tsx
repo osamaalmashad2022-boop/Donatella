@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { IngredientRow } from './IngredientRow';
 import { CostSummaryCard } from './CostSummaryCard';
-import { Plus } from 'lucide-react';
+import { Plus, X, Image as ImageIcon } from 'lucide-react';
 import type { Ingredient, Recipe, RecipeCategory, RecipeIngredient } from '@/types';
 
 interface RecipeFormProps {
@@ -35,6 +36,7 @@ interface RecipeFormProps {
     overheadPercentage: number;
     profitMarginPercentage: number;
     notes: string;
+    noteImages: string[];
   }) => Promise<void>;
   recipe: Recipe | null;
   ingredients: Ingredient[];
@@ -60,7 +62,58 @@ export function RecipeForm({
   const [overheadPercentage, setOverheadPercentage] = useState('0');
   const [profitMarginPercentage, setProfitMarginPercentage] = useState('0');
   const [notes, setNotes] = useState('');
+  const [noteImages, setNoteImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    
+    // Check total size to avoid huge batches, maybe just process them
+    const compressedImages = await Promise.all(files.map(compressImage));
+    setNoteImages((prev) => [...prev, ...compressedImages]);
+  };
+
+  const removeImage = (index: number) => {
+    setNoteImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (recipe) {
@@ -73,6 +126,7 @@ export function RecipeForm({
       setOverheadPercentage(recipe.overheadPercentage.toString());
       setProfitMarginPercentage(recipe.profitMarginPercentage.toString());
       setNotes(recipe.notes || '');
+      setNoteImages(recipe.noteImages || []);
     } else {
       setName('');
       setNameEn('');
@@ -83,6 +137,7 @@ export function RecipeForm({
       setOverheadPercentage('0');
       setProfitMarginPercentage('0');
       setNotes('');
+      setNoteImages([]);
     }
   }, [recipe, open]);
 
@@ -131,6 +186,7 @@ export function RecipeForm({
         overheadPercentage: parseFloat(overheadPercentage) || 0,
         profitMarginPercentage: parseFloat(profitMarginPercentage) || 0,
         notes: notes.trim(),
+        noteImages: noteImages,
       });
     } catch (err) {
       console.error('Failed to save recipe:', err);
@@ -296,16 +352,58 @@ export function RecipeForm({
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="recipe-notes">ملاحظات (اختياري)</Label>
-            <Input
-              id="recipe-notes"
-              placeholder="ملاحظات إضافية..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="h-11 rounded-xl"
-            />
+          {/* Notes and Images */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipe-notes">ملاحظات (اختياري)</Label>
+              <Textarea
+                id="recipe-notes"
+                placeholder="ملاحظات إضافية..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="rounded-xl resize-y"
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>الصور المرفقة</Label>
+                <div>
+                  <input
+                    type="file"
+                    id="note-images-upload"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <Label
+                    htmlFor="note-images-upload"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-xl px-3 cursor-pointer"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    إضافة صورة
+                  </Label>
+                </div>
+              </div>
+              
+              {noteImages.length > 0 && (
+                <div className="flex flex-wrap gap-3">
+                  {noteImages.map((img, idx) => (
+                    <div key={idx} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-border">
+                      <img src={img} alt={`مرفق ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Live Cost Summary */}
