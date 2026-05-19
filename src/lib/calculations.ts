@@ -151,7 +151,11 @@ export function calculateFullBreakdown(
  * Format number as currency (EGP / ج.م)
  */
 export function formatCurrency(value: number): string {
-  return `${value.toFixed(2)} ج.م`;
+  // Drop trailing zeros: 1000.00 → 1000, 12.50 → 12.5, 3.25 → 3.25
+  const formatted = value % 1 === 0
+    ? value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+    : value.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  return `${formatted} ج.م`;
 }
 
 /**
